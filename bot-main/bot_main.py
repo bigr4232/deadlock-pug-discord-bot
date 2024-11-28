@@ -42,6 +42,7 @@ async def on_ready():
     logger.info(f'Starting bot v{__version__}')
     if debugMode:
         await tree.sync(guild=discord.Object(id=config['discordGuildID']))
+        logger.debug("Starting in debug mode")
     else:
         await tree.sync()
     logger.debug("commands synced")
