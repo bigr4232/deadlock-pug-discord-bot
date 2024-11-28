@@ -14,6 +14,7 @@ client = discord.Client(intents=intents)
 managers = {}
 tree = app_commands.CommandTree(client)
 config = config_loader.loadYaml()
+debugMode = False
 
 # Logging
 logger = logging.getLogger('logs')
@@ -29,13 +30,20 @@ for arg in sys.argv:
         fh = logging.FileHandler(f'bot-{pre}-logs.log')
         fh.setLevel(logging.DEBUG)
         logger.addHandler(fh)
+    if arg == '-d':
+        logger.setLevel(logging.DEBUG)
+        debugMode = True
+
 
 
 # Initialization
 @client.event
 async def on_ready():
     logger.info(f'Starting bot v{__version__}')
-    await tree.sync()
+    if debugMode:
+        await tree.sync(guild=discord.Object(id=config['discordGuildID']))
+    else:
+        await tree.sync()
     logger.debug("commands synced")
 
 client.run(config['discordBotToken'])
