@@ -56,7 +56,7 @@ class TwelveMansButton(discord.ui.View):
         if checkDup:
             twelveManPlayers[ctx.guild.id].add(ctx.user)
         await ctx.response.edit_message(content = await tenManStatus(ctx), view=self)
-        if len(twelveManPlayers[ctx.guild.id]) == 10 and checkDup:
+        if len(twelveManPlayers[ctx.guild.id]) == 12 and checkDup:
             logger.debug('Starting 10 mans')
             if ctx.guild.id in sortedList:
                 sortedList[ctx.guild.id].clear()
