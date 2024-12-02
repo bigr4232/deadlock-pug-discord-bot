@@ -40,6 +40,8 @@ for arg in sys.argv:
     if arg == '-d':
         logger.setLevel(logging.DEBUG)
         debugMode = True
+    if arg == '-sim12man':
+        simTwelveMan = True
 
 # Class for 10 mans buttons
 class TwelveMansButton(discord.ui.View):
