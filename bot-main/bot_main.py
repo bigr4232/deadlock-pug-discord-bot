@@ -57,7 +57,7 @@ class TwelveMansButton(discord.ui.View):
             twelveManPlayers[ctx.guild.id].add(ctx.user)
         await ctx.response.edit_message(content = await tenManStatus(ctx), view=self)
         if len(twelveManPlayers[ctx.guild.id]) == 12 and checkDup:
-            logger.debug('Starting 10 mans')
+            logger.debug('Starting 12 mans')
             if ctx.guild.id in sortedList:
                 sortedList[ctx.guild.id].clear()
             sortedList[ctx.guild.id] = await randomizeTeams(twelveManPlayers[ctx.guild.id])
