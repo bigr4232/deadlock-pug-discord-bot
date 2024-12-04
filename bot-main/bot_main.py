@@ -44,6 +44,7 @@ for arg in sys.argv:
     if arg == '-sim12man':
         simTwelveMan = True
 
+# Start team sort
 async def startTeamSort(ctx):
     logger.debug('Starting 12 mans')
     if ctx.guild.id in sortedList:
@@ -52,6 +53,7 @@ async def startTeamSort(ctx):
     msg = await genTeamMessage(ctx)
     await ctx.channel.send(msg, delete_after=200, view=ConfirmOrDenyTeamButtons())
 
+# Generate output message for teams
 async def genTeamMessage(ctx):
     message = 'Team 1: '
     for player in serverMatch[ctx.guild.id].team1.players:
@@ -63,12 +65,14 @@ async def genTeamMessage(ctx):
     message = message[:-2]
     return message
 
+# Generate output message for captains
 async def genCaptainMessage(ctx):
     message = 'Captain Team 1: '
     message += serverMatch[ctx.guild.id].team1.captain.mention + '\nCaptain Team 2: '
     message += serverMatch[ctx.guild.id].team2.captain.mention
     return message
 
+# Pick two team captains
 async def pickTeamCaptains(ctx):
     captain = serverMatch[ctx.guild.id].team1.captain
     while serverMatch[ctx.guild.id].team1.captain == captain:
@@ -79,6 +83,7 @@ async def pickTeamCaptains(ctx):
         capidx = random.randint(0,5)
         serverMatch[ctx.guild.id].team2.captain = serverMatch[ctx.guild.id].team2.players[capidx]
 
+# Start team captain picks
 async def startCaptainPick(ctx):
     logger.debug('Starting captain pick')
     await pickTeamCaptains(ctx)
