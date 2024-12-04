@@ -1,5 +1,5 @@
 class team():
     def __init__(self):
-        players = list()
-        captain = '-'
-        heroes = list()
+        self.players = list()
+        self.captain = '-'
+        self.heroes = list()
