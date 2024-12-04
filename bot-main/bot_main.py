@@ -6,6 +6,7 @@ import sys
 import datetime
 from twelveman import fillTwelveMan
 import random
+from match import match
 
 
 # Globals
@@ -19,6 +20,7 @@ config = config_loader.loadYaml()
 debugMode = False
 twelveManPlayers = dict()
 twelveManMessage = dict()
+serverMatch = dict()
 simTwelveMan = False
 sortedList = dict()
 
@@ -46,23 +48,90 @@ async def startTeamSort(ctx):
     logger.debug('Starting 12 mans')
     if ctx.guild.id in sortedList:
         sortedList[ctx.guild.id].clear()
-    sortedList[ctx.guild.id] = await randomizeTeams(twelveManPlayers[ctx.guild.id])
-    await ctx.channel.send(f'Team 1: {sortedList[ctx.guild.id][0].mention}, {sortedList[ctx.guild.id][1].mention}, {sortedList[ctx.guild.id][2].mention}, {sortedList[ctx.guild.id][3].mention}, {sortedList[ctx.guild.id][4].mention}, {sortedList[ctx.guild.id][5].mention} \nTeam 2: {sortedList[ctx.guild.id][6].mention}, {sortedList[ctx.guild.id][7].mention}, {sortedList[ctx.guild.id][8].mention}, {sortedList[ctx.guild.id][9].mention}, {sortedList[ctx.guild.id][10].mention}, {sortedList[ctx.guild.id][11].mention}', delete_after=600, view=ConfirmOrDenyButtons())
+    await randomizeTeams(twelveManPlayers[ctx.guild.id], ctx)
+    msg = await genTeamMessage(ctx)
+    await ctx.channel.send(msg, delete_after=200, view=ConfirmOrDenyTeamButtons())
 
-# Class for confirm/deny buttons
-class ConfirmOrDenyButtons(discord.ui.View):
+async def genTeamMessage(ctx):
+    message = 'Team 1: '
+    for player in serverMatch[ctx.guild.id].team1.players:
+        message += player.mention + ', '
+    message = message[:-2]
+    message += '\nTeam 2: '
+    for player in serverMatch[ctx.guild.id].team2.players:
+        message += player.mention + ', '
+    message = message[:-2]
+    return message
+
+async def genCaptainMessage(ctx):
+    message = 'Captain Team 1: '
+    message += serverMatch[ctx.guild.id].team1.captain.mention + '\nCaptain Team 2: '
+    message += serverMatch[ctx.guild.id].team2.captain.mention
+    return message
+
+async def pickTeamCaptains(ctx):
+    captain = serverMatch[ctx.guild.id].team1.captain
+    while serverMatch[ctx.guild.id].team1.captain == captain:
+        capidx = random.randint(0,5)
+        serverMatch[ctx.guild.id].team1.captain = serverMatch[ctx.guild.id].team1.players[capidx]
+    captain = serverMatch[ctx.guild.id].team2.captain
+    while serverMatch[ctx.guild.id].team2.captain == captain:
+        capidx = random.randint(0,5)
+        serverMatch[ctx.guild.id].team2.captain = serverMatch[ctx.guild.id].team2.players[capidx]
+
+async def startCaptainPick(ctx):
+    logger.debug('Starting captain pick')
+    await pickTeamCaptains(ctx)
+    msg = await genCaptainMessage(ctx)
+    await ctx.channel.send(msg, delete_after=200, view=ConfirmOrDenyCaptainButtons())
+
+# Class for confirm/deny captain buttons
+class ConfirmOrDenyCaptainButtons(discord.ui.View):
+    def __init__(self, *, timeout=None):
+        super().__init__(timeout=timeout)
+    @discord.ui.button(label='Confirm Captains',style=discord.ButtonStyle.green)
+    async def green_button(self, ctx:discord.Interaction, button:discord.ui.Button):
+        if serverMatch[ctx.guild.id].admin == ctx.user.id:
+            logger.debug('Captains confirmed')
+            await ctx.response.send_message('Captains confirmed', delete_after=30)
+        else:
+            logger.debug(f'Confirm called by {ctx.user.id} without permissions.')
+            await ctx.response.send_message('Can only be done by user who started 12 mans.', delete_after=10)
+    @discord.ui.button(label='Re-Draw Captains', style=discord.ButtonStyle.red)
+    async def red_button(self, ctx:discord.Interaction, button:discord.ui.Button):
+        if serverMatch[ctx.guild.id].admin == ctx.user.id:
+            logger.debug('Re-picking captains')
+            await ctx.response.send_message('Re-picking captains', delete_after=30)
+            await startCaptainPick(ctx)
+        else:
+            logger.debug(f'Re-Scramble called by {ctx.user.id} without permissions.')
+            await ctx.response.send_message('Can only be done by user who started 12 mans.', delete_after=10)
+
+# Class for confirm/deny team buttons
+class ConfirmOrDenyTeamButtons(discord.ui.View):
     def __init__(self, *, timeout=None):
         super().__init__(timeout=timeout)
     @discord.ui.button(label='Confirm Teams',style=discord.ButtonStyle.green)
     async def green_button(self, ctx:discord.Interaction, button:discord.ui.Button):
-        logger.debug('Teams confirmed')
-        del twelveManPlayers[ctx.guild.id]
-        await ctx.response.send_message('Teams confirmed')
+        if serverMatch[ctx.guild.id].admin == ctx.user.id:
+            logger.debug('Teams confirmed')
+            del twelveManPlayers[ctx.guild.id]
+            logger.debug('Picking Captains')
+            await ctx.response.send_message('Picking captains', delete_after=200)
+            await startCaptainPick(ctx)
+        else:
+            logger.debug(f'Confirm called by {ctx.user.id} without permissions.')
+            await ctx.response.send_message('Can only be done by user who started 12 mans.', delete_after=10)
     @discord.ui.button(label='Re-Scramble', style=discord.ButtonStyle.red)
     async def red_button(self, ctx:discord.Interaction, button:discord.ui.Button):
-        logger.debug('Re-scrambling teams')
-        await ctx.response.send_message('Re-Scrambling teams')
-        await startTeamSort(ctx)
+        if serverMatch[ctx.guild.id].admin == ctx.user.id:
+            logger.debug('Re-scrambling teams')
+            serverMatch[ctx.guild.id].clearTeams()
+            await ctx.response.send_message('Re-Scrambling teams', delete_after=30)
+            await startTeamSort(ctx)
+        else:
+            logger.debug(f'Re-Scramble called by {ctx.user.id} without permissions.')
+            await ctx.response.send_message('Can only be done by user who started 12 mans.', delete_after=10)
 
 # Class for 10 mans buttons
 class TwelveMansButton(discord.ui.View):
@@ -89,17 +158,23 @@ class TwelveMansButton(discord.ui.View):
         await ctx.response.edit_message(content = await twelveManStatus(ctx), view=self)
 
 # Randomize teams for 10 mans
-async def randomizeTeams(unsortedSet):
+async def randomizeTeams(unsortedSet, ctx):
     logger.debug('Randomizing teams')
     sortList = list()
     for discordUser in unsortedSet:
         sortList.append(discordUser)
     for i in range(len(sortList)):
-        swapidx = random.randint(0,9)
+        swapidx = random.randint(0,11)
         tempDiscordUser = sortList[swapidx]
         sortList[swapidx] = sortList[i]
         sortList[i] = tempDiscordUser
-    return sortList
+    idx = 0
+    for i in sortList:
+        if idx < 6:
+            serverMatch[ctx.guild.id].team1.players.append(i)
+        else:
+            serverMatch[ctx.guild.id].team2.players.append(i)
+        idx+=1
 
 # Make message to send for 10 man status
 async def twelveManStatus(ctx):
@@ -118,18 +193,22 @@ async def twelveManStatus(ctx):
 async def twelveMans(ctx: discord.Interaction, option:app_commands.Choice[str]):
     logger.info(f'{ctx.user.name} called deadlock-12man command with option {option.name}')
     if option.name == 'start':
-        if ctx.guild.id not in twelveManPlayers or twelveManPlayers[ctx.guild.id] == 0:
+        if ctx.guild.id not in serverMatch or serverMatch[ctx.guild.id] == 0:
             await ctx.response.send_message('Starting 12 mans', delete_after=200)
             message = await ctx.channel.send('0/12 players joined', view=TwelveMansButton())
             twelveManMessage.update({ctx.guild.id : message})
             twelveManPlayers[ctx.guild.id] = set()
+            serverMatch[ctx.guild.id] = match()
+            serverMatch[ctx.guild.id].admin = ctx.user.id
         else:
             await ctx.response.send_message('12 mans already started. Please cancel before starting again', delete_after=30)
     elif option.name == 'cancel':
         if ctx.guild.id in twelveManMessage:
             await ctx.response.send_message('Ending 12 mans', delete_after=30)
             await twelveManMessage[ctx.guild.id].delete()
+            await serverMatch[ctx.guild.id].delete()
             twelveManMessage.pop(ctx.guild.id)
+            serverMatch.pop(ctx.guild.id)
         else:
             await ctx.response.send_message('No 12 mans running', delete_after=30)
 
