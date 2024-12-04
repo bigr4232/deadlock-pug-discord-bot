@@ -21,7 +21,6 @@ twelveManPlayers = dict()
 twelveManMessage = dict()
 simTwelveMan = False
 sortedList = dict()
-twelveManMessage = dict()
 
 # Logging
 logger = logging.getLogger('logs')
@@ -43,6 +42,28 @@ for arg in sys.argv:
     if arg == '-sim12man':
         simTwelveMan = True
 
+async def startTeamSort(ctx):
+    logger.debug('Starting 12 mans')
+    if ctx.guild.id in sortedList:
+        sortedList[ctx.guild.id].clear()
+    sortedList[ctx.guild.id] = await randomizeTeams(twelveManPlayers[ctx.guild.id])
+    await ctx.channel.send(f'Team 1: {sortedList[ctx.guild.id][0].mention}, {sortedList[ctx.guild.id][1].mention}, {sortedList[ctx.guild.id][2].mention}, {sortedList[ctx.guild.id][3].mention}, {sortedList[ctx.guild.id][4].mention}, {sortedList[ctx.guild.id][5].mention} \nTeam 2: {sortedList[ctx.guild.id][6].mention}, {sortedList[ctx.guild.id][7].mention}, {sortedList[ctx.guild.id][8].mention}, {sortedList[ctx.guild.id][9].mention}, {sortedList[ctx.guild.id][10].mention}, {sortedList[ctx.guild.id][11].mention}', delete_after=600, view=ConfirmOrDenyButtons())
+
+# Class for confirm/deny buttons
+class ConfirmOrDenyButtons(discord.ui.View):
+    def __init__(self, *, timeout=None):
+        super().__init__(timeout=timeout)
+    @discord.ui.button(label='Confirm Teams',style=discord.ButtonStyle.green)
+    async def green_button(self, ctx:discord.Interaction, button:discord.ui.Button):
+        logger.debug('Teams confirmed')
+        del twelveManPlayers[ctx.guild.id]
+        await ctx.response.send_message('Teams confirmed')
+    @discord.ui.button(label='Re-Scramble', style=discord.ButtonStyle.red)
+    async def red_button(self, ctx:discord.Interaction, button:discord.ui.Button):
+        logger.debug('Re-scrambling teams')
+        await ctx.response.send_message('Re-Scrambling teams')
+        await startTeamSort(ctx)
+
 # Class for 10 mans buttons
 class TwelveMansButton(discord.ui.View):
     def __init__(self, *, timeout=None):
@@ -55,21 +76,17 @@ class TwelveMansButton(discord.ui.View):
             twelveManPlayers[ctx.guild.id] = await fillTwelveMan(client, config)
         if checkDup:
             twelveManPlayers[ctx.guild.id].add(ctx.user)
-        await ctx.response.edit_message(content = await tenManStatus(ctx), view=self)
+        await ctx.response.edit_message(content = await twelveManStatus(ctx), view=self)
         if len(twelveManPlayers[ctx.guild.id]) == 12 and checkDup:
-            logger.debug('Starting 12 mans')
-            if ctx.guild.id in sortedList:
-                sortedList[ctx.guild.id].clear()
-            sortedList[ctx.guild.id] = await randomizeTeams(twelveManPlayers[ctx.guild.id])
-            await ctx.channel.send(f'Team 1: {sortedList[ctx.guild.id][0].mention}, {sortedList[ctx.guild.id][1].mention}, {sortedList[ctx.guild.id][2].mention}, {sortedList[ctx.guild.id][3].mention}, {sortedList[ctx.guild.id][4].mention}, {sortedList[ctx.guild.id][5].mention} \nTeam 2: {sortedList[ctx.guild.id][6].mention}, {sortedList[ctx.guild.id][7].mention}, {sortedList[ctx.guild.id][8].mention}, {sortedList[ctx.guild.id][9].mention}, {sortedList[ctx.guild.id][10].mention}, {sortedList[ctx.guild.id][11].mention}', delete_after=600)
             await twelveManMessage[ctx.guild.id].delete()
             twelveManMessage.pop(ctx.guild.id)
+            await startTeamSort(ctx)
     @discord.ui.button(label='leave', style=discord.ButtonStyle.red)
     async def red_button(self, ctx:discord.Interaction, button:discord.ui.Button):
         logger.debug(f'red button pressed by {ctx.user.id}')
         if ctx.user in twelveManPlayers[ctx.guild.id]:
             twelveManPlayers[ctx.guild.id].remove(ctx.user)
-        await ctx.response.edit_message(content = await tenManStatus(ctx), view=self)
+        await ctx.response.edit_message(content = await twelveManStatus(ctx), view=self)
 
 # Randomize teams for 10 mans
 async def randomizeTeams(unsortedSet):
@@ -85,7 +102,7 @@ async def randomizeTeams(unsortedSet):
     return sortList
 
 # Make message to send for 10 man status
-async def tenManStatus(ctx):
+async def twelveManStatus(ctx):
     message = f'{len(twelveManPlayers[ctx.guild.id])}/12 players joined:'
     for player in twelveManPlayers[ctx.guild.id]:
         if player.display_name is not None:
@@ -98,7 +115,7 @@ async def tenManStatus(ctx):
 @tree.command(name='deadlock-12man', description='start 12 mans', guild=discord.Object(id=config['discordGuildID']))
 @app_commands.choices(option=[app_commands.Choice(name='start', value='start'),
                     app_commands.Choice(name='cancel', value='cancel')])
-async def tenMans(ctx: discord.Interaction, option:app_commands.Choice[str]):
+async def twelveMans(ctx: discord.Interaction, option:app_commands.Choice[str]):
     logger.info(f'{ctx.user.name} called deadlock-12man command with option {option.name}')
     if option.name == 'start':
         if ctx.guild.id not in twelveManPlayers or twelveManPlayers[ctx.guild.id] == 0:
