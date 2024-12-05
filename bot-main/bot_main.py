@@ -7,6 +7,7 @@ import datetime
 from twelveman import fillTwelveMan
 import random
 from match import match
+from heroes import heroes
 
 
 # Globals
