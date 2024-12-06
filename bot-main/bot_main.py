@@ -7,7 +7,6 @@ import datetime
 from twelveman import fillTwelveMan
 import random
 from match import match
-from heroes import heroes
 
 
 # Globals
@@ -91,6 +90,45 @@ async def startCaptainPick(ctx):
     msg = await genCaptainMessage(ctx)
     await ctx.channel.send(msg, delete_after=200, view=ConfirmOrDenyCaptainButtons())
 
+async def startPickBan(ctx):
+    logger.debug('Starting pick/bans')
+    await ctx.response.edit_message(content = f'Captains confirmed. Starting Bans.\n\nTeam 1 select ban, {serverMatch[ctx.guild.id].team1.captain.mention}', view=PickBanView(ctx=ctx))
+    logger.debug('Success')
+
+# Selection menu for cs servers
+class teamOneBanSelect(discord.ui.Select):
+    def __init__(self, ctx: discord.Interaction):
+        options = [discord.SelectOption(label=hero, value=hero) for hero in serverMatch[ctx.guild.id].unselectedHeroes]
+        super().__init__(placeholder='Heroes', max_values=1, min_values=1, options=options)
+    async def callback(self, ctx: discord.Interaction):
+        if ctx.user.id == serverMatch[ctx.guild.id].team1.captain:
+            logger.debug('Team 1 picked hero')
+            serverMatch[ctx.guild.id].pickBanCount += 1
+            serverMatch[ctx.guild.id].unselectedHeroes.remove(self.values[0])
+            serverMatch[ctx.guild.id].team1.heroes.append(self.values[0])
+            await ctx.response.edit_message(content=f'Team 1 banned hero {self.values[0]}\n\nTeam 2 select ban, {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamTwoBanView(ctx=ctx))     
+        else:
+            await ctx.response.edit_message(content=f'Picks must be made by captain\n\nTeam 1 select ban, {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOneBanView(ctx=ctx))
+
+class TeamOneBanView(discord.ui.View):
+    def __init__(self, *, timeout = 200, ctx:discord.Interaction):
+        super().__init__(timeout=timeout)
+        self.add_item(teamOneBanSelect(ctx=ctx))
+
+class teamTwoBanSelect(discord.ui.Select):
+    def __init__(self, ctx: discord.Interaction):
+        options = [discord.SelectOption(label=hero, value=hero) for hero in serverMatch[ctx.guild.id].unselectedHeroes]
+        super().__init__(placeholder='Heroes', max_values=1, min_values=1, options=options)
+    async def callback(self, ctx: discord.Interaction):
+        logger.debug('Picked hero')
+        await ctx.response.edit_message(f'Picked hero {self.values[0]}')
+        serverMatch[ctx.guild.id].pickBanCount += 1
+
+class TeamTwoBanView(discord.ui.View):
+    def __init__(self, *, timeout = 200, ctx:discord.Interaction):
+        super().__init__(timeout=timeout)
+        self.add_item(teamOneBanSelect(ctx=ctx))
+
 # Class for confirm/deny captain buttons
 class ConfirmOrDenyCaptainButtons(discord.ui.View):
     def __init__(self, *, timeout=None):
@@ -99,7 +137,7 @@ class ConfirmOrDenyCaptainButtons(discord.ui.View):
     async def green_button(self, ctx:discord.Interaction, button:discord.ui.Button):
         if serverMatch[ctx.guild.id].admin == ctx.user.id:
             logger.debug('Captains confirmed')
-            await ctx.response.send_message('Captains confirmed', delete_after=30)
+            await ctx.response.send_message(f'Captains confirmed. Starting Bans.\n\nTeam 1 select ban: {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOneBanView(ctx=ctx))
         else:
             logger.debug(f'Confirm called by {ctx.user.id} without permissions.')
             await ctx.response.send_message('Can only be done by user who started 12 mans.', delete_after=10)
