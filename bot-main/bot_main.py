@@ -92,43 +92,92 @@ async def startCaptainPick(ctx):
 
 async def startPickBan(ctx):
     logger.debug('Starting pick/bans')
-    await ctx.response.edit_message(content = f'Captains confirmed. Starting Bans.\n\nTeam 1 select ban, {serverMatch[ctx.guild.id].team1.captain.mention}', view=PickBanView(ctx=ctx))
+    await ctx.response.edit_message(content = f'Captains confirmed. Starting Bans.\n\nTeam 1 select ban {serverMatch[ctx.guild.id].team1.captain.mention}', view=PickBanView(ctx=ctx))
     logger.debug('Success')
 
 # Selection menu for cs servers
 class teamOneBanSelect(discord.ui.Select):
     def __init__(self, ctx: discord.Interaction):
-        options = [discord.SelectOption(label=hero, value=hero) for hero in serverMatch[ctx.guild.id].unselectedHeroes]
+        options = [discord.SelectOption(label=hero, value=hero) for hero in sorted(serverMatch[ctx.guild.id].unselectedHeroes)]
         super().__init__(placeholder='Heroes', max_values=1, min_values=1, options=options)
     async def callback(self, ctx: discord.Interaction):
-        if ctx.user.id == serverMatch[ctx.guild.id].team1.captain:
+        if ctx.user.id == serverMatch[ctx.guild.id].team1.captain.id:
             logger.debug('Team 1 picked hero')
             serverMatch[ctx.guild.id].pickBanCount += 1
             serverMatch[ctx.guild.id].unselectedHeroes.remove(self.values[0])
-            serverMatch[ctx.guild.id].team1.heroes.append(self.values[0])
-            await ctx.response.edit_message(content=f'Team 1 banned hero {self.values[0]}\n\nTeam 2 select ban, {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamTwoBanView(ctx=ctx))     
+            await ctx.response.edit_message(content=f'Team 1 banned hero {self.values[0]}\n\nTeam 2 select ban {serverMatch[ctx.guild.id].team2.captain.mention}', view=TeamTwoBanView(ctx=ctx))     
         else:
-            await ctx.response.edit_message(content=f'Picks must be made by captain\n\nTeam 1 select ban, {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOneBanView(ctx=ctx))
+            await ctx.response.edit_message(content=f'Picks must be made by captain\n\nTeam 1 select ban {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOneBanView(ctx=ctx))
 
 class TeamOneBanView(discord.ui.View):
     def __init__(self, *, timeout = 200, ctx:discord.Interaction):
         super().__init__(timeout=timeout)
         self.add_item(teamOneBanSelect(ctx=ctx))
 
+# Selection for Team Two ban
 class teamTwoBanSelect(discord.ui.Select):
     def __init__(self, ctx: discord.Interaction):
-        options = [discord.SelectOption(label=hero, value=hero) for hero in serverMatch[ctx.guild.id].unselectedHeroes]
+        options = [discord.SelectOption(label=hero, value=hero) for hero in sorted(serverMatch[ctx.guild.id].unselectedHeroes)]
         super().__init__(placeholder='Heroes', max_values=1, min_values=1, options=options)
     async def callback(self, ctx: discord.Interaction):
-        logger.debug('Picked hero')
-        await ctx.response.edit_message(f'Picked hero {self.values[0]}')
-        serverMatch[ctx.guild.id].pickBanCount += 1
+        if ctx.user.id == serverMatch[ctx.guild.id].team2.captain.id:
+            logger.debug('Team 2 picked hero')
+            serverMatch[ctx.guild.id].pickBanCount += 1
+            serverMatch[ctx.guild.id].unselectedHeroes.remove(self.values[0])
+            await ctx.response.edit_message(content=f'Team 2 banned hero {self.values[0]}\n\nTeam 2 pick hero {serverMatch[ctx.guild.id].team2.captain.mention}', view=TeamTwoPickView(ctx=ctx))     
+        else:
+            await ctx.response.edit_message(content=f'Picks must be made by captain\n\nTeam 2 select ban {serverMatch[ctx.guild.id].team2.captain.mention}', view=TeamTwoBanView(ctx=ctx))
 
 class TeamTwoBanView(discord.ui.View):
     def __init__(self, *, timeout = 200, ctx:discord.Interaction):
         super().__init__(timeout=timeout)
-        self.add_item(teamOneBanSelect(ctx=ctx))
+        self.add_item(teamTwoBanSelect(ctx=ctx))
 
+# Selection menu for cs servers
+class teamOnePickSelect(discord.ui.Select):
+    def __init__(self, ctx: discord.Interaction):
+        options = [discord.SelectOption(label=hero, value=hero) for hero in sorted(serverMatch[ctx.guild.id].unselectedHeroes)]
+        super().__init__(placeholder='Heroes', max_values=1, min_values=1, options=options)
+    async def callback(self, ctx: discord.Interaction):
+        if ctx.user.id == serverMatch[ctx.guild.id].team1.captain.id:
+            logger.debug('Team 1 picked hero')
+            serverMatch[ctx.guild.id].pickBanCount += 1
+            serverMatch[ctx.guild.id].unselectedHeroes.remove(self.values[0])
+            serverMatch[ctx.guild.id].team1.heroes.append(self.values[0])
+            if serverMatch[ctx.guild.id].pickBanCount % 2 == 0:
+                await ctx.response.edit_message(content=f'Team 1 selected hero {self.values[0]}\n\nTeam 1 select hero {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOnePickView(ctx=ctx))
+            else:
+                await ctx.response.edit_message(content=f'Team 1 selected hero {self.values[0]}\n\nTeam 2 select hero {serverMatch[ctx.guild.id].team2.captain.mention}', view=TeamTwoPickView(ctx=ctx))
+        else:
+            await ctx.response.edit_message(content=f'Picks must be made by captain\n\nTeam 1 select hero {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOnePickView(ctx=ctx))
+
+class TeamOnePickView(discord.ui.View):
+    def __init__(self, *, timeout = 200, ctx:discord.Interaction):
+        super().__init__(timeout=timeout)
+        self.add_item(teamOnePickSelect(ctx=ctx))
+
+# Selection for Team Two ban
+class teamTwoPickSelect(discord.ui.Select):
+    def __init__(self, ctx: discord.Interaction):
+        options = [discord.SelectOption(label=hero, value=hero) for hero in sorted(serverMatch[ctx.guild.id].unselectedHeroes)]
+        super().__init__(placeholder='Heroes', max_values=1, min_values=1, options=options)
+    async def callback(self, ctx: discord.Interaction):
+        if ctx.user.id == serverMatch[ctx.guild.id].team2.captain.id:
+            logger.debug('Team 2 picked hero')
+            serverMatch[ctx.guild.id].pickBanCount += 1
+            serverMatch[ctx.guild.id].unselectedHeroes.remove(self.values[0])
+            serverMatch[ctx.guild.id].team2.heroes.append(self.values[0])
+            if serverMatch[ctx.guild.id].pickBanCount % 2 == 0:
+                await ctx.response.edit_message(content=f'Team 2 picked hero {self.values[0]}\n\nTeam 2 pick hero {serverMatch[ctx.guild.id].team2.captain.mention}', view=TeamTwoPickView(ctx=ctx))
+            else:
+                await ctx.response.edit_message(content=f'Team 2 picked hero {self.values[0]}\n\nTeam 1 pick hero {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOnePickView(ctx=ctx))
+        else:
+            await ctx.response.edit_message(content=f'Picks must be made by captain\n\nTeam 2 select hero {serverMatch[ctx.guild.id].team2.captain.mention}', view=TeamTwoPickView(ctx=ctx))
+
+class TeamTwoPickView(discord.ui.View):
+    def __init__(self, *, timeout = 200, ctx:discord.Interaction):
+        super().__init__(timeout=timeout)
+        self.add_item(teamTwoPickSelect(ctx=ctx))
 # Class for confirm/deny captain buttons
 class ConfirmOrDenyCaptainButtons(discord.ui.View):
     def __init__(self, *, timeout=None):
