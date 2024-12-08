@@ -103,7 +103,7 @@ async def displayTeamInfo(ctx):
     output += '\nTeam 2 heroes:\n'
     for hero in serverMatch[ctx.guild.id].team2.heroes:
         output += hero + '\n'
-    await ctx.response.edit_message(content=output)
+    await ctx.response.edit_message(content=output, delete_after=1000)
     del serverMatch[ctx.guild.id]
 
 # Selection menu for cs servers
