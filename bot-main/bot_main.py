@@ -22,7 +22,6 @@ twelveManPlayers = dict()
 twelveManMessage = dict()
 serverMatch = dict()
 simTwelveMan = False
-sortedList = dict()
 
 # Logging
 logger = logging.getLogger('logs')
@@ -47,8 +46,6 @@ for arg in sys.argv:
 # Start team sort
 async def startTeamSort(ctx):
     logger.debug('Starting 12 mans')
-    if ctx.guild.id in sortedList:
-        sortedList[ctx.guild.id].clear()
     await randomizeTeams(twelveManPlayers[ctx.guild.id], ctx)
     msg = await genTeamMessage(ctx)
     await ctx.channel.send(msg, delete_after=200, view=ConfirmOrDenyTeamButtons())
@@ -89,6 +86,25 @@ async def startCaptainPick(ctx):
     await pickTeamCaptains(ctx)
     msg = await genCaptainMessage(ctx)
     await ctx.channel.send(msg, delete_after=200, view=ConfirmOrDenyCaptainButtons())
+
+# Final output and cleanup
+async def displayTeamInfo(ctx):
+    logger.debug('Displaying team info')
+    output = 'Team Info:\n\n'
+    output += 'Team 1 members:\n'
+    for player in serverMatch[ctx.guild.id].team1.players:
+        output += player.mention + '\n'
+    output += '\nTeam 1 heroes:\n'
+    for hero in serverMatch[ctx.guild.id].team1.heroes:
+        output += hero + '\n'
+    output += '\n\nTeam 2 members:\n'
+    for player in serverMatch[ctx.guild.id].team2.players:
+        output += player.mention + '\n'
+    output += '\nTeam 2 heroes:\n'
+    for hero in serverMatch[ctx.guild.id].team2.heroes:
+        output += hero + '\n'
+    await ctx.response.edit_message(content=output)
+    del serverMatch[ctx.guild.id]
 
 # Selection menu for cs servers
 class teamOneBanSelect(discord.ui.Select):
@@ -139,7 +155,9 @@ class teamOnePickSelect(discord.ui.Select):
             serverMatch[ctx.guild.id].pickBanCount += 1
             serverMatch[ctx.guild.id].unselectedHeroes.remove(self.values[0])
             serverMatch[ctx.guild.id].team1.heroes.append(self.values[0])
-            if serverMatch[ctx.guild.id].pickBanCount % 2 == 0:
+            if serverMatch[ctx.guild.id].pickBanCount == 14:
+                await displayTeamInfo(ctx)
+            elif serverMatch[ctx.guild.id].pickBanCount % 2 == 0:
                 await ctx.response.edit_message(content=f'Team 1 selected hero {self.values[0]}\n\nTeam 1 select hero {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOnePickView(ctx=ctx))
             else:
                 await ctx.response.edit_message(content=f'Team 1 selected hero {self.values[0]}\n\nTeam 2 select hero {serverMatch[ctx.guild.id].team2.captain.mention}', view=TeamTwoPickView(ctx=ctx))
@@ -162,7 +180,9 @@ class teamTwoPickSelect(discord.ui.Select):
             serverMatch[ctx.guild.id].pickBanCount += 1
             serverMatch[ctx.guild.id].unselectedHeroes.remove(self.values[0])
             serverMatch[ctx.guild.id].team2.heroes.append(self.values[0])
-            if serverMatch[ctx.guild.id].pickBanCount % 2 == 0:
+            if serverMatch[ctx.guild.id].pickBanCount == 14:
+                await displayTeamInfo(ctx)
+            elif serverMatch[ctx.guild.id].pickBanCount % 2 == 0:
                 await ctx.response.edit_message(content=f'Team 2 picked hero {self.values[0]}\n\nTeam 2 pick hero {serverMatch[ctx.guild.id].team2.captain.mention}', view=TeamTwoPickView(ctx=ctx))
             else:
                 await ctx.response.edit_message(content=f'Team 2 picked hero {self.values[0]}\n\nTeam 1 pick hero {serverMatch[ctx.guild.id].team1.captain.mention}', view=TeamOnePickView(ctx=ctx))
@@ -173,7 +193,7 @@ class TeamTwoPickView(discord.ui.View):
     def __init__(self, *, timeout = 200, ctx:discord.Interaction):
         super().__init__(timeout=timeout)
         self.add_item(teamTwoPickSelect(ctx=ctx))
-        
+
 # Class for confirm/deny captain buttons
 class ConfirmOrDenyCaptainButtons(discord.ui.View):
     def __init__(self, *, timeout=None):
