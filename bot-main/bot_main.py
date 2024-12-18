@@ -33,7 +33,7 @@ for arg in sys.argv:
     if arg == '-log':
         logger.setLevel(logging.DEBUG)
         now = datetime.datetime.now()
-        pre = now.strftime("%Y-%m-%d_%H:%M:%S")
+        pre = now.strftime("%Y-%m-%d_%H-%M-%S")
         fh = logging.FileHandler(f'bot-{pre}-logs.log')
         fh.setLevel(logging.DEBUG)
         logger.addHandler(fh)
