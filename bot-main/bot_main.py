@@ -64,7 +64,7 @@ async def genTeamMessage(ctx):
 
 # Generate output message for captains
 async def genCaptainMessage(ctx):
-    message = 'Captain Team 1: '
+    message = 'Captains:\n\nCaptain Team 1: '
     message += serverMatch[ctx.guild.id].team1.captain.mention + '\nCaptain Team 2: '
     message += serverMatch[ctx.guild.id].team2.captain.mention
     return message
@@ -85,7 +85,7 @@ async def startCaptainPick(ctx):
     logger.debug('Starting captain pick')
     await pickTeamCaptains(ctx)
     msg = await genCaptainMessage(ctx)
-    await ctx.channel.send(msg, delete_after=200, view=ConfirmOrDenyCaptainButtons())
+    await ctx.response.edit_message(content = msg, delete_after=200, view=ConfirmOrDenyCaptainButtons())
 
 # Final output and cleanup
 async def displayTeamInfo(ctx):
@@ -210,7 +210,6 @@ class ConfirmOrDenyCaptainButtons(discord.ui.View):
     async def red_button(self, ctx:discord.Interaction, button:discord.ui.Button):
         if serverMatch[ctx.guild.id].admin == ctx.user.id:
             logger.debug('Re-picking captains')
-            await ctx.response.send_message('Re-picking captains', delete_after=30)
             await startCaptainPick(ctx)
         else:
             logger.debug(f'Re-Scramble called by {ctx.user.id} without permissions.')
@@ -226,7 +225,6 @@ class ConfirmOrDenyTeamButtons(discord.ui.View):
             logger.debug('Teams confirmed')
             del twelveManPlayers[ctx.guild.id]
             logger.debug('Picking Captains')
-            await ctx.response.send_message('Picking captains', delete_after=200)
             await startCaptainPick(ctx)
         else:
             logger.debug(f'Confirm called by {ctx.user.id} without permissions.')
@@ -312,12 +310,14 @@ async def twelveMans(ctx: discord.Interaction, option:app_commands.Choice[str]):
         else:
             await ctx.response.send_message('12 mans already started. Please cancel before starting again', delete_after=30)
     elif option.name == 'cancel':
-        if ctx.guild.id in twelveManMessage:
+        if ctx.guild.id in twelveManMessage or ctx.guild.id in serverMatch.keys():
             await ctx.response.send_message('Ending 12 mans', delete_after=30)
-            await twelveManMessage[ctx.guild.id].delete()
-            await serverMatch[ctx.guild.id].delete()
-            twelveManMessage.pop(ctx.guild.id)
-            serverMatch.pop(ctx.guild.id)
+            if ctx.guild.id in twelveManMessage.keys():
+                await twelveManMessage[ctx.guild.id].delete()
+                twelveManMessage.pop(ctx.guild.id)
+            if ctx.guild.id in serverMatch.keys():
+                serverMatch.pop(ctx.guild.id)
+            logger.debug('Canceled 12-mans')
         else:
             await ctx.response.send_message('No 12 mans running', delete_after=30)
 
