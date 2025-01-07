@@ -10,7 +10,7 @@ from match import match
 
 
 # Globals
-__version__ = 1.0.1
+__version__ = '1.0.1'
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
