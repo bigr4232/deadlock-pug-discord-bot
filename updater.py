@@ -13,7 +13,7 @@ def updateYaml():
     discordchannel = input('Enter the id for the default cs channel for the bot: ')
     discordguildid = input('Enter the id of the server/guild that the bot will be in: ')
     discordownerid = input('Enter the discord id of the bot owner for admin commands: ')
-    discordadminrole = input('Enter the role id for the cs server admin role: ')
+    discordadminrole = input('Enter the role id for the deadlock server admin role: ')
     setYaml(discordbottoken, discordchannel, discordadminrole, discordguildid, discordownerid)
 
 def updateFiles(dst):
