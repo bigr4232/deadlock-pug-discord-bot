@@ -19,13 +19,14 @@ def updateYaml():
 def updateFiles(dst):
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
     dst = os.path.join(ROOT_DIR, dst)
-    botPath = os.path.join(dst, 'bot-main')
+    botPath = os.path.join(dst, 'BotMain')
     if not os.path.exists(botPath):
         os.makedirs(botPath)
     shutil.copy(os.path.abspath('BotMain/bot_main.py'), os.path.join(botPath, 'bot_main.py'))
     shutil.copy('BotMain/heroes.py', os.path.join(botPath, 'heroes.py'))
     shutil.copy('BotMain/match.py', os.path.join(botPath, 'match.py'))
     shutil.copy('BotMain/team.py', os.path.join(botPath, 'team.py'))
+    shutil.copy('BotMain/twelveman.py', os.path.join(botPath, 'twelveman.py'))
     shutil.copy('BotMain/config_loader.py', os.path.join(botPath, 'config_loader.py'))
     shutil.copy('requirements.txt', os.path.join(dst, 'requirements.txt'))
     shutil.copy('docker-compose.yml', os.path.join(dst, 'docker-compose.yml'))
@@ -34,7 +35,7 @@ def updateFiles(dst):
         updateYaml()
         shutil.copy('config.yaml', os.path.join(dst, 'config.yaml'))
     if not os.path.exists(dst + '/bot-main/accounts.yaml'):
-        shutil.copy('bot-main/accounts.yaml', os.path.join(dst, 'accounts.yaml'))
+        shutil.copy('BotMain/accounts.yaml', os.path.join(dst, 'accounts.yaml'))
 
 def main():
     logger.info('Updating files to version in this folder')
