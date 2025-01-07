@@ -10,7 +10,7 @@ from match import match
 
 
 # Globals
-__version__ = 0.0
+__version__ = 1.0.1
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
@@ -294,7 +294,7 @@ async def twelveManStatus(ctx):
     return message
 
 # Twelve mans discord command
-@tree.command(name='deadlock-12man', description='start 12 mans', guild=discord.Object(id=config['discordGuildID']))
+@tree.command(name='deadlock-12man', description='start 12 mans')
 @app_commands.choices(option=[app_commands.Choice(name='start', value='start'),
                     app_commands.Choice(name='cancel', value='cancel')])
 async def twelveMans(ctx: discord.Interaction, option:app_commands.Choice[str]):
@@ -327,7 +327,7 @@ async def twelveMans(ctx: discord.Interaction, option:app_commands.Choice[str]):
 async def on_ready():
     logger.info(f'Starting bot v{__version__}')
     if debugMode:
-        await tree.sync(guild=discord.Object(id=config['discordGuildID']))
+        await tree.sync()
         logger.debug("Starting in debug mode")
     else:
         await tree.sync()
