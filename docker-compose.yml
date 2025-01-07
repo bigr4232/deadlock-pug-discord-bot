@@ -1,0 +1,10 @@
+version: '3.4'
+
+services:
+  deadlockDiscordBot:
+    image: deadlock-discord-bot
+    container_name: deadlock-discord-bot
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
